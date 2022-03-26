@@ -5,6 +5,7 @@ from collections import OrderedDict
 import csv
 
 
+# Function to get a request from a string
 def get_page(url):
     response = requests.get(url)
     soup = None
@@ -15,6 +16,7 @@ def get_page(url):
     return soup
 
 
+# Function to get the data(name, state, description, ...) from a product
 def get_data_product(soup):
     try:
         name = soup.find('h1', {"class": "x-item-title__mainTitle"}).find('span', {
@@ -102,6 +104,7 @@ def get_data_product(soup):
     return data
 
 
+# Function that allow to find links to other pages and save it to a list
 def get_index_data(soup):
     try:
         links = soup.find_all('a', {'itemprop': 'url'})
@@ -112,6 +115,7 @@ def get_index_data(soup):
     return list(OrderedDict.fromkeys(url))
 
 
+# Function that creates and add the data of the products in a csv
 def write_csv(data, url):
     with open('data.csv', 'a') as csv_file:
         writer = csv.writer(csv_file)
@@ -132,16 +136,13 @@ def write_csv(data, url):
             data['id_product_ebay'],
             data['image'], url
         ]
-
         writer.writerow(row)
 
 
 def main():
-    url = 'https://www.ebay.com/globaldeals'
-    # url1 = 'https://www.ebay.com/itm/194060416913?_trkparms=5373%3A0%7C5374%3AFeatured'
-    # get_data_product(get_page(url1))
-    products = get_index_data(get_page(url))
-    if os.path.exists('data.csv') and os.path.isfile('data.csv'):
+    url = 'https://www.ebay.com/globaldeals'  # Url of the offers in eBay
+    products = get_index_data(get_page(url))  # List of the Urls of different products
+    if os.path.exists('data.csv') and os.path.isfile('data.csv'):  # IF that delete the csv in case this exist
         os.remove('data.csv')
     else:
         print("file not found")
