@@ -1,8 +1,19 @@
-import os
 import requests
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 import csv
+from datetime import datetime
+import psycopg2
+
+def post_db(url, products):
+    mydb = psycopg2.connect(user='jnhtfcjqoslawm', password='cecd94fc0872c4bc82b837bde8eedcd3c990e7f50644ccc0d495bbd77954e526', host='ec2-44-196-174-238.compute-1.amazonaws.com', database='dfhhdtj8ujfucj', port=5432)
+
+    mycursor = mydb.cursor()
+
+    sql = "INSERT INTO auditoria (fecha, pagina_web, numero_registros,estado,errores) VALUES (%s, %s, %s, %s, %s)"
+    val = (datetime.today(), url, products, 0, "")
+    mycursor.execute(sql, val)
+    mydb.commit()
 
 
 # Function to get a request from a string
@@ -18,13 +29,18 @@ def get_page(url):
 
 # Function to get the data(name, state, description, ...) from a product
 def get_data_product(soup):
+    mydb = psycopg2.connect(user='jnhtfcjqoslawm',
+                            password='cecd94fc0872c4bc82b837bde8eedcd3c990e7f50644ccc0d495bbd77954e526',
+                            host='ec2-44-196-174-238.compute-1.amazonaws.com', database='dfhhdtj8ujfucj', port=5432)
+
+    mycursor = mydb.cursor()
     try:
         name = soup.find('h1', {"class": "x-item-title__mainTitle"}).find('span', {
             'class': 'ux-textspans ux-textspans--BOLD'}).text
     except:
         name = ''
     try:
-        state = soup.find('span', {'data-testid': 'ux-textual-display'}).find('span', {'class': "ux-textspans"}).text
+        state = soup.find('span', {'data-testid': 'spa'}).find('span', {'class': "ux-textspans"}).text
     except:
         state = ''
     try:
@@ -101,8 +117,11 @@ def get_data_product(soup):
         'id_product_ebay': id_product_ebay,
         'image': image
     }
+    sql = "INSERT INTO registro (name, state, description,price,cant,sell_n,seller,seller_stars, seller_quality,day_back,mark_as_favorite,shipping_cost,shipping_day,id_product_ebay, image) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    val = (name, state, description,price,cant,sell_n,seller,seller_stars, seller_quality,day_back,mark_as_favorite,shipping_cost,shipping_day,id_product_ebay, image)
+    mycursor.execute(sql, val)
+    mydb.commit()
     return data
-
 
 # Function that allow to find links to other pages and save it to a list
 def get_index_data(soup):
@@ -138,17 +157,21 @@ def write_csv(data, url):
         ]
         writer.writerow(row)
 
-
 def main():
     url = 'https://www.ebay.com/globaldeals'  # Url of the offers in eBay
     products = get_index_data(get_page(url))  # List of the Urls of different products
-    if os.path.exists('data.csv') and os.path.isfile('data.csv'):  # IF that delete the csv in case this exist
-        os.remove('data.csv')
-    else:
-        print("file not found")
+    post_db(url, len(products))
     for link in products:
-        data = get_data_product(get_page(link))
-        write_csv(data, link)
+        get_data_product(get_page(link))
+
+    #Code to import in a CSV
+    #if os.path.exists('data.csv') and os.path.isfile('data.csv'):  # IF that delete the csv in case this exist
+    #    os.remove('data.csv')
+    #else:
+    #    print("file not found")
+    #for link in products:
+    #    data = get_data_product(get_page(link))
+    #write_csv(data, link)
 
 
 if __name__ == '__main__':
